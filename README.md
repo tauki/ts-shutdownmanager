@@ -77,4 +77,4 @@ Or, if you're running the application in a terminal, you can usually trigger a g
 Your services should aim to handle these closures as gracefully as possible, ensuring that any in-flight operations are completed before shutting down.
 
 ### License
-TS-ShutdownManager is MIT licensed.
+ShutdownManager is MIT licensed.
