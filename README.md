@@ -4,18 +4,16 @@ ShutdownManager is a lightweight TypeScript library designed to manage the grace
 It listens for OS signals `(SIGINT, SIGTERM)` and ensures that all registered services are properly closed before the application exits. 
 This is especially useful for releasing database connections, closing file streams, or cleaning up resources to prevent data corruption and ensure a smooth restart.
 
-## Installation
-
 ```bash
-npm install shutdownmanager
+$ npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
 ```
 
-or
-
-```bash
-npm install shutdownmanager --registry=https://npm.pkg.github.com
+or install via `package.json`
+```json
+{
+  "@tauki/shutdownmanager": "1.0.0"
+}
 ```
-
 ## Usage
 
 ### Basic Example
@@ -23,13 +21,13 @@ npm install shutdownmanager --registry=https://npm.pkg.github.com
 First, import the `ShutdownManager`:
 
 ```typescript
-import { ShutdownManager } from 'shutdownmanager';
+import { ShutdownManager } from '@tauki/shutdownmanager';
 ```
 
 or 
 
 ```javascript
-const { ShutdownManager } = require('shutdownmanager');
+const { ShutdownManager } = require('@tauki/shutdownmanager');
 ```
 
 Next, initialize the `ShutdownManager` and add your services. Each service should have a `close` method which returns a Promise. This method will contain the logic to gracefully shut down the service.
