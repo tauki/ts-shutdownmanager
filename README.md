@@ -10,6 +10,12 @@ This is especially useful for releasing database connections, closing file strea
 npm install shutdownmanager
 ```
 
+or
+
+```bash
+npm install shutdownmanager --registry=https://npm.pkg.github.com
+```
+
 ## Usage
 
 ### Basic Example
