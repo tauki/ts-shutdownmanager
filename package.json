@@ -14,7 +14,7 @@
     "build": "tsc"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "@tauki:registry": "https://npm.pkg.github.com"
   },
   "repository": {
     "type": "git",
