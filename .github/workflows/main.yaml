@@ -39,10 +39,11 @@ jobs:
         with:
           name: release-package
           path: |
-            dist/**
+            dist
             package.json
             README.md
             LICENSE
+            tsconfig.json
 
   gh-release:
     needs: build
