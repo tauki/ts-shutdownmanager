@@ -1,11 +1,9 @@
-import winston, { format } from 'winston';
-
-export type param = { [key: string]: unknown };
+export type Param = { [key: string]: unknown };
 
 export interface ILogger {
-    info(message: string, ...params: param[]): void;
-    debug(message: string, ...params: param[]): void;
-    error(message: string, error: Error, ...params: param[]): void;
+    info(message: string, ...params: Param[]): void;
+    debug(message: string, ...params: Param[]): void;
+    error(message: string, error: Error, ...params: Param[]): void;
 }
 
 function errorToObject(error: Error) {
@@ -16,65 +14,43 @@ function errorToObject(error: Error) {
     };
 }
 
-const openTelemetryFormat = format.printf(
-    ({ level, message, timestamp, error, ...params }) => {
+class Logger implements ILogger {
+    private log(level: string, message: string, params?: Param) {
         const baseAttributes = {
             level,
-            timestamp,
+            timestamp: new Date().toISOString(),
         };
-
-        const errorAttributes = error ? { error: JSON.stringify(error) } : {};
-        const paramAttributes = params ? { ...params } : {};
 
         const attributes = {
             ...baseAttributes,
-            ...errorAttributes,
-            ...paramAttributes,
+            ...params,
         };
 
-        return JSON.stringify({
-            message: `${message}${error ? ` - Error: ${JSON.stringify(error)}` : ''}`,
+        console.log(JSON.stringify({
+            message,
             ...attributes,
-        });
-    }
-);
-
-export class logger implements ILogger {
-    public logger: winston.Logger;
-
-    constructor() {
-        // create logger
-        this.logger = winston.createLogger({
-            level: 'debug',
-            format: openTelemetryFormat,
-            transports: [
-                new winston.transports.Console(),
-            ],
-            handleExceptions: true,
-            exitOnError: false,
-        });
+        }));
     }
 
-    private mergeParams(params: param[]) {
+    private mergeParams(params: Param[]) {
         return Object.assign({}, ...params);
     }
 
-    public info(message: string, ...params: param[]): void {
-        this.logger.info(message, this.mergeParams(params));
+    public info(message: string, ...params: Param[]): void {
+        this.log('info', message, this.mergeParams(params));
     }
 
-    public debug(message: string, ...params: param[]): void {
-        this.logger.debug(message, this.mergeParams(params));
+    public debug(message: string, ...params: Param[]): void {
+        this.log('debug', message, this.mergeParams(params));
     }
 
-    public error(message: string, error: Error, ...params: param[]): void {
-        this.mergeParams(params);
-        this.logger.error(message, {
+    public error(message: string, error: Error, ...params: Param[]): void {
+        this.log('error', message, {
             error: errorToObject(error),
             ...this.mergeParams(params),
         });
     }
 }
 
-const loggerInstance: logger = new logger();
-export { loggerInstance as defaultLogger };
+const defaultLogger = new Logger();
+export { defaultLogger };
