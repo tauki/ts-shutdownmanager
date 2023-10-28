@@ -14,7 +14,7 @@ describe('ShutdownManager', () => {
                 }
             }
         ];
-        const shutdownManager = new ShutdownManager(...servicesToClose);
+        new ShutdownManager(...servicesToClose);
         process.emit('SIGTERM');
     });
 
@@ -31,7 +31,7 @@ describe('ShutdownManager', () => {
                 }
             }
         ];
-        const shutdownManager = new ShutdownManager(...servicesToClose);
+        new ShutdownManager(...servicesToClose);
         process.emit('SIGINT');
     });
 });
