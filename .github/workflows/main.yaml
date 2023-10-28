@@ -34,16 +34,14 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Create Archive
+        run: tar -czvf release-package.tar.gz dist package.json README.md LICENSE tsconfig.json
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: release-package
-          path: |
-            dist
-            package.json
-            README.md
-            LICENSE
-            tsconfig.json
+          path: release-package.tar.gz
 
   gh-release:
     needs: build
@@ -73,6 +71,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: release-package
+
+      - name: Extract Archive
+        run: tar -xzvf release-package.tar.gz
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
