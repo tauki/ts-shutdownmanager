@@ -1,0 +1,39 @@
+{
+  "name": "shutdownmanager",
+  "version": "1.0.0",
+  "description": "waits for OS signal and gracefully closes services passed to it on the signal before returning.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "jest",
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tauki/ts-shutdownmanager"
+  },
+  "keywords": [
+    "ts",
+    "shutdownmanager",
+    "graceful",
+    "close"
+  ],
+  "author": "Tauki Tahmid",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.6",
+    "@types/node": "^20.8.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "winston": "^3.11.0"
+  }
+}
