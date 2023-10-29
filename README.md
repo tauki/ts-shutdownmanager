@@ -5,7 +5,7 @@ It listens for OS signals `(SIGINT, SIGTERM)` and ensures that all registered se
 This is especially useful for releasing database connections, closing file streams, or cleaning up resources to prevent data corruption and ensure a smooth restart.
 
 ```bash
-$ npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
+npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
 ```
 
 or install via `package.json`
@@ -59,12 +59,26 @@ const customLogger = {
   info: (message: string) => console.log(`INFO: ${message}`),
   debug: (message: string) => console.log(`DEBUG: ${message}`),
   error: (message: string, error: Error) => console.error(`ERROR: ${message}`, error),
+  warn: (message: string) => console.warn(`WARN: ${message}`)
 };
 
 const shutdownManager = new ShutdownManager(customLogger, databaseService, eventBusService);
 ```
 
 This custom logger will be used for logging information, debug messages, and errors during the shutdown process.
+
+### Using NoOp Logger
+```typescript
+import { noOpLogger } from '@tauki/shutdownmanager';
+
+new ShutdownManager(noOpLogger, databaseService, eventBusService);
+```
+
+or just pass a null in the first argument to use the NoOp Logger
+
+```typescript
+new ShutdownManager(null, databaseService, eventBusService);
+```
 
 ### Triggering a Graceful Shutdown
    You can trigger a graceful shutdown manually by sending a SIGINT or SIGTERM signal to your Node.js application.
