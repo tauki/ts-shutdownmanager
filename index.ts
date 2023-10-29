@@ -37,6 +37,46 @@ export class ShutdownManager {
     this.init();
   }
 
+  public async wait(): Promise<void> {
+    if (!this.closed) {
+      await new Promise<void>((resolve): void => {
+        const check = (): void => {
+          if (this.closed) resolve();
+          else setTimeout(check, 100);
+        };
+        check();
+      });
+    }
+  }
+
+  public async shutdown(timeout?: number): Promise<void> {
+    this.logger.info('Shutdown initiated programmatically.');
+    const shutdownPromise: Promise<void> = this.close();
+
+    if (timeout !== undefined) {
+      const timeoutPromise: Promise<void> = new Promise<void>((_, reject): void => {
+        setTimeout(() => {
+          reject(new Error(`Shutdown timed out after ${timeout}ms`));
+        }, timeout);
+      });
+
+      try {
+        await Promise.race([shutdownPromise, timeoutPromise]);
+      } catch (error) {
+        this.logger.error('Shutdown failed:', error instanceof Error ? error : new Error(String(error)));
+        throw error;
+      }
+    } else {
+      try {
+        await shutdownPromise;
+      } catch (error) {
+        this.logger.error('Shutdown failed:', error instanceof Error ? error : new Error(String(error)));
+        throw error;
+      }
+    }
+  }
+
+
   private isLogger(arg: unknown): arg is ILogger {
     return (
         typeof arg === 'object' &&
@@ -48,19 +88,35 @@ export class ShutdownManager {
   }
 
   private init(): void {
-    process.on('SIGINT', () => this.close());
-    process.on('SIGTERM', () => this.close());
+    process.on('SIGINT', this.handleSignal);
+    process.on('SIGTERM', this.handleSignal);
+  }
+
+  private handleSignal = (): void => {
+    this.shutdown().catch((error) => this.logger.error('Failed to shutdown:', error));
+  };
+
+  private cleanupSignals(): void {
+    process.removeListener('SIGINT', this.handleSignal);
+    process.removeListener('SIGTERM', this.handleSignal);
   }
 
   private async close(): Promise<void> {
-    if (!this.closed) {
-      this.closed = true;
-      this.logger.info('Graceful shutdown initiated.');
-      if (!this.closingPromise) {
-        this.closingPromise = this.closeServices();
+    if (this.closed) {
+      if (this.closingPromise) {
+        return this.closingPromise;
+      } else {
+        return;
       }
-      await this.closingPromise;
     }
+
+    this.closed = true;
+    this.logger.info('Graceful shutdown initiated.');
+    this.closingPromise = this.closeServices().finally(() => {
+      this.cleanupSignals();
+    });
+
+    return this.closingPromise;
   }
 
   private async closeServices(): Promise<void> {
@@ -68,7 +124,8 @@ export class ShutdownManager {
       try {
         await service.close();
       } catch (error: unknown) {
-        this.logger.error(`Error closing service:`, error instanceof Error ? error : new Error(String(error)));
+        const errorObject = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(`Error closing service: ${errorObject.message}`, errorObject);
       }
     }
   }
