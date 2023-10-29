@@ -27,7 +27,7 @@
     "close"
   ],
   "author": "Tauki Tahmid",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.6",
     "@types/node": "^20.8.9",
