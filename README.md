@@ -7,7 +7,7 @@ ShutdownManager is a lightweight TypeScript library designed to manage the grace
 You can install ShutdownManager using npm:
 
 ```bash
-npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
+npm install shutdownmanager
 ```
 
 Or, you can add it to your `package.json` file:
@@ -15,7 +15,7 @@ Or, you can add it to your `package.json` file:
 ```json
 {
   "dependencies": {
-    "@tauki/shutdownmanager": "^1.0.0"
+    "shutdownmanager": "^1.0.0"
   }
 }
 ```
@@ -33,13 +33,13 @@ npm install
 First, import the `ShutdownManager`:
 
 ```typescript
-import { ShutdownManager } from '@tauki/shutdownmanager';
+import { ShutdownManager } from 'shutdownmanager';
 ```
 
 Or in CommonJS syntax:
 
 ```javascript
-const { ShutdownManager } = require('@tauki/shutdownmanager');
+const { ShutdownManager } = require('shutdownmanager');
 ```
 
 Next, initialize the `ShutdownManager` and add your services. Each service should have a `close` method which returns a Promise. This method will contain the logic to gracefully shut down the service.
@@ -60,6 +60,30 @@ const eventBusService = {
 };
 
 const shutdownManager = new ShutdownManager(databaseService, eventBusService);
+```
+
+### Adding Services Dynamically
+
+You can add services to the `ShutdownManager` after it has been instantiated using the `addService` method.
+
+```typescript
+const shutdownManager = new ShutdownManager(databaseService);
+
+// Later in your code...
+shutdownManager.addService(eventBusService);
+```
+
+### Configuration and Parallel Shutdown
+
+By default, `ShutdownManager` closes services sequentially in the order they were added. You can configure it to close services in parallel by passing a configuration object.
+
+```typescript
+const config = {
+  parallel: true, // Services will be closed concurrently
+  logger: customLogger // Optional: Pass a custom logger or null for noOpLogger
+};
+
+const shutdownManager = new ShutdownManager(config, databaseService, eventBusService);
 ```
 
 ### Manually Initiating Shutdown
