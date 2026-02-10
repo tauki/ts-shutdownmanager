@@ -7,7 +7,7 @@ ShutdownManager is a lightweight TypeScript library designed to manage the grace
 You can install ShutdownManager using npm:
 
 ```bash
-npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
+npm install @tauki/shutdownmanager@1.1.0 --registry=https://npm.pkg.github.com
 ```
 
 Or, you can add it to your `package.json` file:
@@ -15,7 +15,7 @@ Or, you can add it to your `package.json` file:
 ```json
 {
   "dependencies": {
-    "@tauki/shutdownmanager": "^1.0.0"
+    "@tauki/shutdownmanager": "^1.1.0"
   }
 }
 ```
