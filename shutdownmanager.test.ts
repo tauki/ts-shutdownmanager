@@ -142,3 +142,69 @@ describe('ShutdownManager - Manual Shutdown', () => {
         expect(mockCloseFunction).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('ShutdownManager - New Features', () => {
+    let mockCloseFunction: jest.Mock;
+    let servicesToClose: ServicesToClose[];
+
+    beforeEach(() => {
+        mockCloseFunction = jest.fn(() => Promise.resolve());
+        servicesToClose = [{ close: mockCloseFunction }];
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('should allow adding services post-instantiation', async () => {
+        const manager = new ShutdownManager();
+        const newService = { close: jest.fn(() => Promise.resolve()) };
+        manager.addService(newService);
+        await manager.shutdown();
+        expect(newService.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle parallel shutdown', async () => {
+        const slowService1 = {
+            close: jest.fn(() => new Promise<void>(resolve => setTimeout(resolve, 100)))
+        };
+        const slowService2 = {
+            close: jest.fn(() => new Promise<void>(resolve => setTimeout(resolve, 100)))
+        };
+        const manager = new ShutdownManager({ parallel: true }, slowService1, slowService2);
+
+        const start = Date.now();
+        await manager.shutdown();
+        const duration = Date.now() - start;
+
+        expect(slowService1.close).toHaveBeenCalledTimes(1);
+        expect(slowService2.close).toHaveBeenCalledTimes(1);
+        // If parallel, it should take ~100ms, if sequential ~200ms
+        expect(duration).toBeLessThan(180);
+    });
+
+    it('should log correctly when initiated by signal', async () => {
+        const mockLogger = {
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+        };
+        new ShutdownManager(mockLogger, ...servicesToClose);
+        process.emit('SIGINT');
+        await new Promise(setImmediate);
+        expect(mockLogger.info).toHaveBeenCalledWith('Shutdown initiated by signal.');
+    });
+
+    it('should use ShutdownConfig in constructor', async () => {
+        const mockLogger = {
+            info: jest.fn(),
+            debug: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+        };
+        const manager = new ShutdownManager({ logger: mockLogger, parallel: true }, ...servicesToClose);
+        await manager.shutdown();
+        expect(mockLogger.info).toHaveBeenCalledWith('Shutdown initiated programmatically.');
+    });
+});

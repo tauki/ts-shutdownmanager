@@ -1,7 +1,20 @@
 import { defaultLogger, ILogger } from './logger';
 
+export const noOpLogger: ILogger = {
+  info: () => {},
+  debug: () => {},
+  error: () => {},
+  warn: () => {},
+};
+
 // ServicesToClose is an interface that defines the shape of the services that will be closed
 export interface ServicesToClose { close(): Promise<void>; }
+
+// ShutdownConfig is an interface that defines the configuration options for the ShutdownManager
+export interface ShutdownConfig {
+  logger?: ILogger | null;
+  parallel?: boolean;
+}
 
 // ShutdownManager is a class that will listen for OS signals and close the services that are passed to it
 // when the OS signals are received (SIGINT, SIGTERM)
@@ -9,16 +22,29 @@ export class ShutdownManager {
   private closed: boolean = false;
   private closingPromise: Promise<void> | null = null;
   private logger: ILogger;
-  private readonly servicesToClose: ServicesToClose[];
+  private servicesToClose: ServicesToClose[];
+  private readonly initiationPromise: Promise<void>;
+  private resolveInitiation!: () => void;
+  private parallel: boolean = false;
 
   constructor();
   constructor(logger: ILogger | null);
+  constructor(config: ShutdownConfig);
   constructor(...servicesToClose: ServicesToClose[]);
   constructor(logger: ILogger | null, ...servicesToClose: ServicesToClose[]);
+  constructor(config: ShutdownConfig, ...servicesToClose: ServicesToClose[]);
   constructor(...args: any[]) {
+    this.initiationPromise = new Promise((resolve) => {
+      this.resolveInitiation = resolve;
+    });
+
     const [firstArg, ...restArgs] = args;
 
-    if (this.isLogger(firstArg)) {
+    if (this.isConfig(firstArg)) {
+      this.logger = firstArg.logger === null ? noOpLogger : (firstArg.logger || defaultLogger);
+      this.parallel = !!firstArg.parallel;
+      this.servicesToClose = restArgs as ServicesToClose[];
+    } else if (this.isLogger(firstArg)) {
       this.logger = firstArg;
       this.servicesToClose = restArgs as ServicesToClose[];
     } else if (firstArg === null) {
@@ -37,20 +63,19 @@ export class ShutdownManager {
     this.init();
   }
 
+  public addService(service: ServicesToClose): void {
+    this.servicesToClose.push(service);
+  }
+
   public async wait(): Promise<void> {
-    if (!this.closed) {
-      await new Promise<void>((resolve): void => {
-        const check = (): void => {
-          if (this.closed) resolve();
-          else setTimeout(check, 100);
-        };
-        check();
-      });
+    await this.initiationPromise;
+    if (this.closingPromise) {
+      await this.closingPromise;
     }
   }
 
-  public async shutdown(timeout?: number): Promise<void> {
-    this.logger.info('Shutdown initiated programmatically.');
+  public async shutdown(timeout?: number, source: 'programmatic' | 'signal' = 'programmatic'): Promise<void> {
+    this.logger.info(`Shutdown initiated ${source === 'programmatic' ? 'programmatically' : 'by signal'}.`);
     const shutdownPromise: Promise<void> = this.close();
 
     if (timeout !== undefined) {
@@ -83,8 +108,20 @@ export class ShutdownManager {
         arg !== null &&
         'info' in arg &&
         'debug' in arg &&
-        'error' in arg
+        'error' in arg &&
+        'warn' in arg
     );
+  }
+
+  private isConfig(arg: unknown): arg is ShutdownConfig {
+    if (typeof arg !== 'object' || arg === null || this.isLogger(arg)) {
+      return false;
+    }
+    // If it's an object and not a logger, check if it's a service.
+    // A service MUST have a 'close' method.
+    // A config MAY have 'logger' or 'parallel'.
+    // If it has neither and NO 'close' method, we'll treat it as a config (e.g. {})
+    return !('close' in arg) || 'logger' in arg || 'parallel' in arg;
   }
 
   private init(): void {
@@ -93,7 +130,7 @@ export class ShutdownManager {
   }
 
   private handleSignal = (): void => {
-    this.shutdown().catch((error) => this.logger.error('Failed to shutdown:', error));
+    this.shutdown(undefined, 'signal').catch((error) => this.logger.error('Failed to shutdown:', error));
   };
 
   private cleanupSignals(): void {
@@ -111,6 +148,7 @@ export class ShutdownManager {
     }
 
     this.closed = true;
+    this.resolveInitiation();
     this.logger.info('Graceful shutdown initiated.');
     this.closingPromise = this.closeServices().finally(() => {
       this.cleanupSignals();
@@ -119,21 +157,22 @@ export class ShutdownManager {
     return this.closingPromise;
   }
 
+  private async closeService(service: ServicesToClose): Promise<void> {
+    try {
+      await service.close();
+    } catch (error: unknown) {
+      const errorObject = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Error closing service: ${errorObject.message}`, errorObject);
+    }
+  }
+
   private async closeServices(): Promise<void> {
-    for (const service of this.servicesToClose) {
-      try {
-        await service.close();
-      } catch (error: unknown) {
-        const errorObject = error instanceof Error ? error : new Error(String(error));
-        this.logger.error(`Error closing service: ${errorObject.message}`, errorObject);
+    if (this.parallel) {
+      await Promise.all(this.servicesToClose.map((service) => this.closeService(service)));
+    } else {
+      for (const service of this.servicesToClose) {
+        await this.closeService(service);
       }
     }
   }
 }
-
-export const noOpLogger: ILogger = {
-  info: () => {},
-  debug: () => {},
-  error: () => {},
-  warn: () => {},
-};
