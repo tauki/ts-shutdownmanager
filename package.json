@@ -1,5 +1,5 @@
 {
-  "name": "shutdownmanager",
+  "name": "@tauki/shutdownmanager",
   "version": "1.0.0",
   "description": "waits for OS signal and gracefully closes services passed to it on the signal before returning.",
   "main": "dist/index.js",

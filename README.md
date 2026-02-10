@@ -7,7 +7,7 @@ ShutdownManager is a lightweight TypeScript library designed to manage the grace
 You can install ShutdownManager using npm:
 
 ```bash
-npm install shutdownmanager
+npm install @tauki/shutdownmanager@1.0.0 --registry=https://npm.pkg.github.com
 ```
 
 Or, you can add it to your `package.json` file:
@@ -15,7 +15,7 @@ Or, you can add it to your `package.json` file:
 ```json
 {
   "dependencies": {
-    "shutdownmanager": "^1.0.0"
+    "@tauki/shutdownmanager": "^1.0.0"
   }
 }
 ```
@@ -33,13 +33,13 @@ npm install
 First, import the `ShutdownManager`:
 
 ```typescript
-import { ShutdownManager } from 'shutdownmanager';
+import { ShutdownManager } from '@tauki/shutdownmanager';
 ```
 
 Or in CommonJS syntax:
 
 ```javascript
-const { ShutdownManager } = require('shutdownmanager');
+const { ShutdownManager } = require('@tauki/shutdownmanager');
 ```
 
 Next, initialize the `ShutdownManager` and add your services. Each service should have a `close` method which returns a Promise. This method will contain the logic to gracefully shut down the service.

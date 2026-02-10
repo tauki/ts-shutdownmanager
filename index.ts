@@ -23,8 +23,8 @@ export class ShutdownManager {
   private closingPromise: Promise<void> | null = null;
   private logger: ILogger;
   private servicesToClose: ServicesToClose[];
-  private readonly initiationPromise: Promise<void>;
-  private resolveInitiation!: () => void;
+  private readonly shutdownInitiatedPromise: Promise<void>;
+  private resolveShutdownInitiated!: () => void;
   private parallel: boolean = false;
 
   constructor();
@@ -34,8 +34,8 @@ export class ShutdownManager {
   constructor(logger: ILogger | null, ...servicesToClose: ServicesToClose[]);
   constructor(config: ShutdownConfig, ...servicesToClose: ServicesToClose[]);
   constructor(...args: any[]) {
-    this.initiationPromise = new Promise((resolve) => {
-      this.resolveInitiation = resolve;
+    this.shutdownInitiatedPromise = new Promise((resolve) => {
+      this.resolveShutdownInitiated = resolve;
     });
 
     const [firstArg, ...restArgs] = args;
@@ -68,7 +68,7 @@ export class ShutdownManager {
   }
 
   public async wait(): Promise<void> {
-    await this.initiationPromise;
+    await this.shutdownInitiatedPromise;
     if (this.closingPromise) {
       await this.closingPromise;
     }
@@ -119,9 +119,8 @@ export class ShutdownManager {
     }
     // If it's an object and not a logger, check if it's a service.
     // A service MUST have a 'close' method.
-    // A config MAY have 'logger' or 'parallel'.
-    // If it has neither and NO 'close' method, we'll treat it as a config (e.g. {})
-    return !('close' in arg) || 'logger' in arg || 'parallel' in arg;
+    // If it has a 'close' method, we treat it as a service, not a config.
+    return !('close' in arg);
   }
 
   private init(): void {
@@ -148,7 +147,7 @@ export class ShutdownManager {
     }
 
     this.closed = true;
-    this.resolveInitiation();
+    this.resolveShutdownInitiated();
     this.logger.info('Graceful shutdown initiated.');
     this.closingPromise = this.closeServices().finally(() => {
       this.cleanupSignals();
