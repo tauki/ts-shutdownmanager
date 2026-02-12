@@ -63,6 +63,10 @@ export class ShutdownManager {
     this.init();
   }
 
+  public getServices(): ServicesToClose[] {
+    return [...this.servicesToClose];
+  }
+
   public addService(service: ServicesToClose): void {
     this.servicesToClose.push(service);
   }
@@ -174,4 +178,37 @@ export class ShutdownManager {
       }
     }
   }
+}
+
+export const defaultShutdownManager = new ShutdownManager();
+
+export function shutdown(timeout?: number) {
+  return function (value: any, context: ClassMethodDecoratorContext) {
+    if (context.kind !== 'method') {
+      throw new Error('@shutdown decorator can only be used on methods.');
+    }
+
+    context.addInitializer(function (this: any) {
+      defaultShutdownManager.addService({
+        close: async () => {
+          const closePromise = value.call(this);
+          if (timeout === undefined) {
+            await closePromise;
+            return;
+          }
+          let timer: NodeJS.Timeout;
+          const timeoutPromise = new Promise<void>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error(`Shutdown timed out after ${timeout}ms`));
+            }, timeout);
+          });
+          try {
+            await Promise.race([closePromise, timeoutPromise]);
+          } finally {
+            clearTimeout(timer!);
+          }
+        }
+      });
+    });
+  };
 }
