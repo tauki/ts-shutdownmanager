@@ -44,6 +44,54 @@ const { ShutdownManager } = require('@tauki/shutdownmanager');
 
 Next, initialize the `ShutdownManager` and add your services. Each service should have a `close` method which returns a Promise. This method will contain the logic to gracefully shut down the service.
 
+### Using Decorators
+
+`shutdownmanager` supports Stage 3 decorators to automatically register class methods for graceful shutdown. This is especially useful when you have multiple instances of a class and want each of them to be closed.
+
+To use decorators, simply apply the `@shutdown` decorator to any method you want to be called during shutdown.
+
+```typescript
+import { shutdown } from '@tauki/shutdownmanager';
+
+class MyService {
+  @shutdown()
+  async close() {
+    console.log('Service closing...');
+  }
+}
+
+const s1 = new MyService();
+const s2 = new MyService();
+```
+
+When a graceful shutdown is initiated (either by an OS signal or by calling `defaultShutdownManager.shutdown()`), both `s1.close()` and `s2.close()` will be called.
+
+#### Specifying a Timeout for Decorators
+
+You can also specify a timeout (in milliseconds) for a decorated method. If the method takes longer than the specified timeout to resolve, it will be considered timed out and an error will be logged.
+
+```typescript
+class MyService {
+  @shutdown(5000) // 5 seconds timeout
+  async close() {
+    // ...
+  }
+}
+```
+
+#### Using the Default Shutdown Manager
+
+When using decorators, services are registered with a global `defaultShutdownManager` instance. You can import this instance to manually initiate a shutdown or wait for it to complete.
+
+```typescript
+import { defaultShutdownManager } from '@tauki/shutdownmanager';
+
+// Manually initiate shutdown for all decorated services
+await defaultShutdownManager.shutdown();
+```
+
+### Traditional Usage
+
 ```typescript
 const databaseService = {
   close: async (): Promise<void> => {
